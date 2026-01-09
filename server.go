@@ -49,4 +49,20 @@ func (s *Server) handleConn(conn net.Conn) {
 	}()
 
 	buf := make([]byte, 2048)
+
+	for {
+		n, err := conn.Read(buf)
+		if err != nil {
+			log.Printf("conn read error: %s\n", err)
+			break
+		}
+
+		go s.handleCommand(conn, buf[:n])
+	}
 }
+
+func (s *Server) handleCommand(conn net.Conn, rawCmd []byte) {
+
+}
+
+func (s *Server) handleSetCmd(conn net.Conn)
