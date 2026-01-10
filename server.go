@@ -62,7 +62,23 @@ func (s *Server) handleConn(conn net.Conn) {
 }
 
 func (s *Server) handleCommand(conn net.Conn, rawCmd []byte) {
+	msg, err := parseMessage(rawCmd)
+	if err != nil {
+		fmt.Println("failed to parse command", err)
+		// respond
+		return
+	}
 
+	switch msg.Cmd {
+	case CMDSet:
+		if err := s.handleSetCmd(conn, msg); err != nil {
+			// respond
+			return
+		}
+	}
 }
 
-func (s *Server) handleSetCmd(conn net.Conn)
+func (s *Server) handleSetCmd(conn net.Conn, msg *Message) error {
+	fmt.Println("handling the SET command: ", msg)
+	return nil
+}
