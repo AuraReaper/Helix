@@ -1,35 +1,35 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"net"
-	"time"
+	"flag"
 
 	"github.com/AuraReaper/helix/cache"
 )
 
 func main() {
+	// conn, err := net.Dial("tcp", ":3000")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// _, err = conn.Write([]byte("SET status okay 4000000"))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// return
+
+	var (
+		listenAddr = flag.String("listenaddr", ":3000", "listern  address of server")
+		leaderAddr = flag.String("leaderaddr", "", "listen address of the leader")
+	)
+	flag.Parse()
+
 	opts := ServerOpts{
-		ListenAddr: ":3000",
-		IsLeader:   true,
+		ListenAddr: *listenAddr,
+		IsLeader:   len(*leaderAddr) == 0,
+		LeaderAddr: *leaderAddr,
 	}
-
-	go func() {
-		time.Sleep(2 * time.Second)
-		conn, err := net.Dial("tcp", ":3000")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		conn.Write([]byte("SET master yashkr 25000000000"))
-		time.Sleep(time.Second * 2)
-
-		conn.Write([]byte("GET master"))
-		buf := make([]byte, 1000)
-		n, _ := conn.Read(buf)
-		fmt.Println(string(buf[:n]))
-	}()
 
 	server := NewServer(opts, cache.New())
 	server.Start()

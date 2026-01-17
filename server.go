@@ -12,17 +12,21 @@ import (
 type ServerOpts struct {
 	ListenAddr string
 	IsLeader   bool
+	LeaderAddr string
 }
 
 type Server struct {
 	ServerOpts
-	cache cache.Cacher
+	followers map[net.Conn]struct{}
+	cache     cache.Cacher
 }
 
 func NewServer(opts ServerOpts, c cache.Cacher) *Server {
 	return &Server{
 		ServerOpts: opts,
-		cache:      c,
+		// only maintained by the leader
+		followers: make(map[net.Conn]struct{}),
+		cache:     c,
 	}
 }
 
@@ -33,6 +37,18 @@ func (s *Server) Start() error {
 	}
 
 	log.Printf("server starting on port [%s]\n", s.ListenAddr)
+
+	if !s.IsLeader {
+		go func() {
+			conn, err := net.Dial("tcp", s.LeaderAddr)
+			fmt.Printf("connected to leader: %s\n", s.LeaderAddr)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			s.handleConn(conn)
+		}()
+	}
 
 	for {
 		conn, err := ln.Accept()
@@ -45,11 +61,15 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) handleConn(conn net.Conn) {
-	defer func() {
-		conn.Close()
-	}()
+	defer conn.Close()
 
 	buf := make([]byte, 2048)
+
+	if s.IsLeader {
+		s.followers[conn] = struct{}{}
+	}
+
+	fmt.Println("connection made:", conn.RemoteAddr())
 
 	for {
 		n, err := conn.Read(buf)
@@ -69,6 +89,8 @@ func (s *Server) handleCommand(conn net.Conn, rawCmd []byte) {
 		conn.Write([]byte(err.Error()))
 		return
 	}
+
+	fmt.Printf("received command %s\n", msg.Cmd)
 
 	switch msg.Cmd {
 	case CMDSet:
@@ -106,5 +128,13 @@ func (s *Server) handleSetCmd(conn net.Conn, msg *Message) error {
 }
 
 func (s *Server) sendToFollowers(ctx context.Context, msg *Message) error {
+	for conn := range s.followers {
+		fmt.Println("forwarding key to follower")
+		_, err := conn.Write(msg.ToBytes())
+		if err != nil {
+			fmt.Printf("error sending message to follower:  %v", err)
+			continue
+		}
+	}
 	return nil
 }
