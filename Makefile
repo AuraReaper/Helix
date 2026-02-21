@@ -6,3 +6,6 @@ run: build
 
 newrun: build
 	./bin/helix --listenaddr :4000 --leaderaddr :3000
+
+test:
+	go test -v ./...
