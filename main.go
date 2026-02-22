@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/AuraReaper/helix/cache"
 	"github.com/AuraReaper/helix/client"
-	"github.com/AuraReaper/helix/protocol"
 )
 
 func main() {
@@ -28,37 +25,26 @@ func main() {
 
 	go func() {
 		time.Sleep(2 * time.Second)
+		client, err := client.New(":3000", client.Options{})
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		for i := 0; i < 10; i++ {
-			SendCommand()
+			SendCommand(client)
 			time.Sleep(200 * time.Millisecond)
 		}
+		client.Close()
+		time.Sleep(1 * time.Second)
 	}()
 
 	server := NewServer(opts, cache.New())
 	server.Start()
 }
 
-func SendCommand() {
-	cmd := &protocol.CommandSet{
-		Key:   []byte("user"),
-		Value: []byte("yash"),
-	}
-
-	client, err := client.New(":3000", client.Options{})
+func SendCommand(c *client.Client) {
+	_, err := c.Set(context.Background(), []byte("master"), []byte("yash"), 0)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	resp, err := client.Set(context.Background(), []byte("user"), []byte("yash"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(resp)
-
-	conn, err := net.Dial("tcp", ":3000")
-	if err != nil {
-		log.Fatal(err)
-	}
-	conn.Write(cmd.Bytes())
 }
