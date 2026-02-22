@@ -77,5 +77,11 @@ func (s *Server) handleCommand(conn net.Conn, cmd any) {
 
 func (s *Server) handleSetCommand(conn net.Conn, cmd *protocol.CommandSet) error {
 	log.Printf("SET %s to %s", cmd.Key, cmd.Value)
-	return s.cache.Set(cmd.Key, cmd.Value, time.Duration(cmd.TTL))
+	if err := s.cache.Set(cmd.Key, cmd.Value, time.Duration(cmd.TTL)); err != nil {
+		resp := protocol.ResponseSet{
+			Status: protocol.StatusError,
+		}
+		conn.Write(resp.Bytes())
+		return err
+	}
 }
