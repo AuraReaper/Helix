@@ -30,12 +30,9 @@ func main() {
 			log.Fatal(err)
 		}
 
-		for i := 0; i < 10; i++ {
-			SendCommand(client)
-			time.Sleep(200 * time.Millisecond)
-		}
+		client.Set(context.Background(), []byte("user"), []byte("yash"), 0)
+
 		client.Close()
-		time.Sleep(1 * time.Second)
 	}()
 
 	server := NewServer(opts, cache.New())
