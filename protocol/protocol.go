@@ -8,18 +8,52 @@ import (
 )
 
 type Command byte
+type Status byte
 
 const (
-	CmdNonce Command = iota
+	CmdNone Command = iota
 	CmdGet
 	CmdSet
 	CmdDel
+)
+
+const (
+	StatusNone Status = iota
+	StatusOK
+	StatusError
 )
 
 type CommandSet struct {
 	Key   []byte
 	Value []byte
 	TTL   int
+}
+
+type ResponseGet struct {
+	Status Status
+	Value  []byte
+}
+
+type ResponseSet struct {
+	Status Status
+}
+
+func (r *ResponseGet) Bytes() []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, r.Status)
+
+	valueLen := int32(len(r.Value))
+	binary.Write(buf, binary.LittleEndian, valueLen)
+	binary.Write(buf, binary.LittleEndian, r.Value)
+
+	return buf.Bytes()
+}
+
+func (r *ResponseSet) Bytes() []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, r.Status)
+
+	return buf.Bytes()
 }
 
 func (c *CommandSet) Bytes() []byte {
