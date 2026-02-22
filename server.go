@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -54,11 +55,16 @@ func (s *Server) handleConn(conn net.Conn) {
 	for {
 		cmd, err := protocol.ParseCommand(conn)
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			log.Println("parse command error:", err)
 			break
 		}
 		go s.handleCommand(conn, cmd)
 	}
+
+	fmt.Println("connection closed:", conn.RemoteAddr())
 }
 
 func (s *Server) handleCommand(conn net.Conn, cmd any) {
